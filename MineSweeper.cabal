@@ -39,6 +39,7 @@ library
       , random
       , array
       , random-shuffle
+      , split
   default-language: Haskell2010
 
 executable MineSweeper-exe
@@ -56,6 +57,7 @@ executable MineSweeper-exe
     , random
     , array
     , random-shuffle
+    , split
   default-language: Haskell2010
 
 test-suite MineSweeper-test

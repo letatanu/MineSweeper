@@ -8,16 +8,22 @@ module Lib
     , cell2char
     , createGame
     , formatGameGrid
-    , makeRandomMine
+    , randomMines
     , setMine
     , cellCoord
     , setMines
     , createSolution
+    , cellSolutionAtLocation
+    , replace
+    , Cell(Cell, Empty)
+    , Game (gameGrid, gameGridSolution, gameScore)
+    , formatGameGridSolution
+    , playGame
     ) where
 
 import System.Random
 import qualified Data.Map as M
--- import System.Random.Shuffle (shuffle')
+import System.Random.Shuffle (shuffle')
 
 data Game = Game {
                 gameGrid :: Grid Cell,
@@ -25,7 +31,9 @@ data Game = Game {
                 gameScore :: Int
                 }
 
-data Cell = Cell (Integer, Integer) Char deriving (Eq, Ord, Show)
+data Cell = Cell (Integer, Integer) Char 
+          | Empty deriving (Eq, Ord, Show)
+
 type Grid a = [[a]]
 
 
@@ -80,8 +88,7 @@ mapOverGrid = map . map
 -- formatGrid :: Grid Cell -> String
 -- formatGrid = unlines . mapOverGrid cell2char 
 
-cell2char :: Cell -> Char
-cell2char (Cell _ c) = c
+
 
 
 ------- 
@@ -91,39 +98,47 @@ createGame x y =
         gwc = gridWithCoords grid
     in Game gwc gwc 0 
 
-makeRandomMine g game =
-    let grid = gameGrid game
-        gen = mkStdGen g
+
+
+
+-- randCoor = zip (rand [1,2,3,4]) (rand [1,2,3,4])
+randomMines :: RandomGen b => Integer -> Game -> b -> [(Integer, Integer)]
+randomMines mineNumber game gen =
+    let grid = formatGameGrid game
+        height = length grid
+        width = length (grid !! 0)
+
         (gen1, gen2) = split gen
-        [height] = take 1 $ randomRs(0, length grid) gen1
-        [width] = take 1 $ randomRs (0, length (grid !! 0)) gen2 
-    in (height, width)
+        xArray = [(0::Integer).. (toInteger (width-1))]
+        yArray = [(0::Integer)..(toInteger (height-1))]
+
+        xArrayShuffled = take (fromIntegral mineNumber) $ shuffle' xArray (length xArray) gen1
+        yArrayShuffled = take (fromIntegral mineNumber) $ shuffle' yArray (length yArray) gen2
+    in zip xArrayShuffled yArrayShuffled
 
 formatGameGrid :: Game -> Grid Char
 formatGameGrid game =
     let grid = gameGrid game
         charGrid = mapOverGrid cell2char grid
     in charGrid
-        
--- randomMines mineNumbers game gen =
---     let grid = gameGrid game
---         height = length grid
---         width = length (grid !! 0)
 
---         (gen1, gen2) = split gen
---         xArray = [0..width-1]
---         yArray = [0..height-1]
-
---         xArrayShuffled = shuffle' xArray (length xArray) gen1
---         yArrayShuffled = shuffle' yArray (length yArray) gen2
---     in zip xArrayShuffled yArrayShuffled
+formatGameGridSolution :: Game -> Grid Char
+formatGameGridSolution game =
+    let grid = gameGridSolution game
+        charGrid = mapOverGrid cell2char grid
+    in charGrid
 
 cellCoord :: Cell -> (Integer, Integer)
 cellCoord (Cell b _) = b
+cellCoord Empty = (-1,-1)
+
+cell2char :: Cell -> Char
+cell2char (Cell _ c) = c
+cell2char Empty = '-'
 
 setMine :: Game -> (Integer, Integer) -> Grid Char
 setMine game loc =
-    let grid = gameGrid game
+    let grid = gameGridSolution game
         formatCell cell =
             let char = cell2char cell
                 coordCell = cellCoord cell
@@ -134,7 +149,9 @@ setMine game loc =
 setMines :: Game -> [(Integer, Integer)] -> Game
 setMines game (x:xs) =
     let a = gridWithCoords $ setMine game x
-        newGame = Game a a 0
+        newGame = game {
+            gameGridSolution = a
+        }
     in setMines newGame xs
 setMines game _ = game
 
@@ -149,8 +166,52 @@ f x=[[ head $ [c | c > ' ']
             | (j,c)<-z r ] |(i,r)<-z x ]
 
 createSolution game = 
-    let grid = formatGameGrid game
-    in f grid
+    let grid = formatGameGridSolution game
+        newGame = game {
+            gameGridSolution = gridWithCoords (f grid)
+        }
+    in newGame
 
+cellSolutionAtLocation :: Game -> (Int, Int) -> Cell
+cellSolutionAtLocation game loc =
+    let gridSolution = gameGridSolution game
+        (x, y) = loc
+        height = length gridSolution
+        width = length $ gridSolution !! 0
+    in if (x < height && y < width ) 
+        then ((gridSolution !! x) !! y)
+        else Empty
 
-playGame 
+cellAtLocation game loc =
+    let grid = gameGrid game
+        (x, y) = loc
+        height = length grid
+        width = length $ grid !! 0
+    in if (x < height && y < width ) 
+        then ((grid !! x) !! y)
+        else Empty 
+
+replace _ _ [] = []
+replace oldVal newVal (x:xs)
+   | x == oldVal = newVal:xs
+   | otherwise = x:replace oldVal newVal xs
+
+playGame game input
+    | cellAtLocation game input == Empty = game
+    | otherwise =
+        let gridSolution = gameGridSolution game
+            grid = gameGrid game
+            cell = cellAtLocation game input
+            solutionCell = cellSolutionAtLocation game input
+            newgame = case solutionCell of
+                Empty -> game
+                otherwise ->  
+                    let (x,y) = cellCoord cell
+                        newGridRow = replace cell solutionCell (grid !! (fromIntegral x))
+                        newGrid = replace (grid !! (fromIntegral x)) newGridRow grid
+                        score = (gameScore game) + 1
+                    in game {
+                        gameGrid = newGrid,
+                        gameScore = score
+                    }
+        in newgame

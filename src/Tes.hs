@@ -1,6 +1,5 @@
 module Tes (
-    rand, 
-    randomMines
+    
 ) where
 import System.Random (newStdGen, split)
 import System.Random.Shuffle (shuffle')
