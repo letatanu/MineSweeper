@@ -27,7 +27,7 @@ source-repository head
 
 library
   exposed-modules:
-      Lib, Data, Tes
+      Lib
   other-modules:
       Paths_MineSweeper
   hs-source-dirs:
@@ -35,7 +35,6 @@ library
   build-depends:
       base >=4.7 && <5
       , containers
-      , ansi-terminal
       , random
       , array
       , random-shuffle
@@ -53,7 +52,6 @@ executable MineSweeper-exe
       MineSweeper
     , base >=4.7 && <5
     , containers
-    , ansi-terminal
     , random
     , array
     , random-shuffle

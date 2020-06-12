@@ -19,6 +19,8 @@ module Lib
     , Game (gameGrid, gameGridSolution, gameScore)
     , formatGameGridSolution
     , playGame
+    , completed
+    , f
     ) where
 
 import System.Random
@@ -28,7 +30,9 @@ import System.Random.Shuffle (shuffle')
 data Game = Game {
                 gameGrid :: Grid Cell,
                 gameGridSolution :: Grid Cell,
-                gameScore :: Int
+                gameScore :: Int,
+                mineNumber :: Int,
+                size :: Int
                 }
 
 data Cell = Cell (Integer, Integer) Char 
@@ -85,20 +89,13 @@ gridWithCoords grid = zipOverGridWith Cell coordsGrid grid
 mapOverGrid :: (a -> b) -> Grid a -> Grid b
 mapOverGrid = map . map
 
--- formatGrid :: Grid Cell -> String
--- formatGrid = unlines . mapOverGrid cell2char 
-
-
 
 
 ------- 
--- createGame :: Int -> Int -> [[Char]]
-createGame x y = 
+createGame x y mineNumber= 
     let grid = take x $ repeat $ take y $ repeat ' '
         gwc = gridWithCoords grid
-    in Game gwc gwc 0 
-
-
+    in Game gwc gwc 0 mineNumber (x*y)
 
 
 -- randCoor = zip (rand [1,2,3,4]) (rand [1,2,3,4])
@@ -109,12 +106,13 @@ randomMines mineNumber game gen =
         width = length (grid !! 0)
 
         (gen1, gen2) = split gen
-        xArray = [(0::Integer).. (toInteger (width-1))]
-        yArray = [(0::Integer)..(toInteger (height-1))]
+        xArray = [(0::Integer).. (toInteger (height-1))]
+        yArray = [(0::Integer)..(toInteger (width-1))]
 
-        xArrayShuffled = take (fromIntegral mineNumber) $ shuffle' xArray (length xArray) gen1
-        yArrayShuffled = take (fromIntegral mineNumber) $ shuffle' yArray (length yArray) gen2
-    in zip xArrayShuffled yArrayShuffled
+        xArrayShuffled = shuffle' xArray (length xArray) gen1
+        yArrayShuffled = shuffle' yArray (length yArray) gen2
+        cross = [(x,y) | x <- xArrayShuffled, y <- yArrayShuffled]    
+    in take (fromIntegral mineNumber) $ cross
 
 formatGameGrid :: Game -> Grid Char
 formatGameGrid game =
@@ -159,11 +157,9 @@ setMines game _ = game
 
 z=zip[1..]
 
-x % i = [a | (j,a)<-z x, abs(i-j)<2]
+x%i=[a|(j,a)<-z x,abs(i-j)<2]
 
-f x=[[ head $ [c | c > ' '] 
-            ++ show ( sum[1 | '*' <- (%j) =<< x%i ] ) 
-            | (j,c)<-z r ] |(i,r)<-z x ]
+f x=[[head$[c|c>' ']++show(sum[1|'*'<-(%j)=<<x%i])|(j,c)<-z r]|(i,r)<-z x]
 
 createSolution game = 
     let grid = formatGameGridSolution game
@@ -209,9 +205,22 @@ playGame game input
                     let (x,y) = cellCoord cell
                         newGridRow = replace cell solutionCell (grid !! (fromIntegral x))
                         newGrid = replace (grid !! (fromIntegral x)) newGridRow grid
-                        score = (gameScore game) + 1
-                    in game {
-                        gameGrid = newGrid,
-                        gameScore = score
-                    }
+                        cellSolChar = cell2char solutionCell
+                    in if (cellSolChar == '*')
+                        then game { gameGrid = gridSolution} 
+                        else game { gameGrid = newGrid, gameScore = ((gameScore game) + 1) }
         in newgame
+
+        
+completed game=
+    let gridSolution = gameGridSolution game
+        grid = gameGrid game
+        score = gameScore game
+    in if (gridSolution == grid)
+        then (True, False)
+        else 
+            let totalScore = (size game) - (mineNumber game)
+            in if (totalScore == score) 
+                then (True, True)
+                else (False, False)
+
