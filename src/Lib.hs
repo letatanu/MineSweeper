@@ -69,7 +69,7 @@ addingBar x =
     let bar = take (length x) (repeat '.')
     in [bar] ++ [x]
 
--- ---
+--- This is for handling and converting from game to grid and grid to game
 zipOverGrid :: Grid a -> Grid b -> Grid (a,b)
 zipOverGrid = zipWith zip
 
@@ -91,7 +91,7 @@ mapOverGrid = map . map
 
 
 
-------- 
+------- Creating and generating mines in the game ------
 createGame x y mineNumber= 
     let grid = take x $ repeat $ take y $ repeat ' '
         gwc = gridWithCoords grid
@@ -153,9 +153,9 @@ setMines game (x:xs) =
     in setMines newGame xs
 setMines game _ = game
 
----------- create solution grid
+---------- Adding labels to squares surrounding mines ---------
 
-z=zip[1..]
+z = zip[1..]
 
 x%i=[a|(j,a)<-z x,abs(i-j)<2]
 
@@ -167,6 +167,8 @@ createSolution game =
             gameGridSolution = gridWithCoords (f grid)
         }
     in newGame
+
+------ Geting locations of cells in a grid ---------
 
 cellSolutionAtLocation :: Game -> (Int, Int) -> Cell
 cellSolutionAtLocation game loc =
@@ -192,6 +194,9 @@ replace oldVal newVal (x:xs)
    | x == oldVal = newVal:xs
    | otherwise = x:replace oldVal newVal xs
 
+
+------ Playing a game --------
+
 playGame game input
     | cellAtLocation game input == Empty = game
     | otherwise =
@@ -211,7 +216,7 @@ playGame game input
                         else game { gameGrid = newGrid, gameScore = ((gameScore game) + 1) }
         in newgame
 
-        
+------ Check if a game is completed ------  
 completed game=
     let gridSolution = gameGridSolution game
         grid = gameGrid game
