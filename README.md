@@ -1,7 +1,7 @@
 # MineSweeper
 ![](demo.gif)
 
-The simple MineSweeper is implemented by Haskell.
+The simple MineSweeper is implemented in Haskell.
 
 # How to Run
 ## Install Dependencies
